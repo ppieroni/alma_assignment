@@ -20,7 +20,7 @@ class IRExpert:
         self._offered_rates = {}
 
         for ticker, underlier_price in underlier_prices.items():
-            for future in self._futures_by_ticker[ticker]:
+            for future in self._futures_by_underlier_ticker[ticker]:
                 future_ticker = future.ticker()
                 days_to_maturity = future.days_to_maturity()
                 if future_ticker in future_bids:
@@ -45,6 +45,9 @@ class IRExpert:
 
     def min_offered_rate(self):
         return min(self._offered_rates.items(), key=lambda each: each[1])
+
+    def ready(self):
+        return self._taker_rates and self._offered_rates
 
     def _implicit_rate(self, maturity_price, current_price, days_to_maturity):
         """Anualized implicit rate computed using Actual/DAYS_IN_A_YEAR day count convention with daily compounding"""
