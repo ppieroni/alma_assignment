@@ -1,5 +1,7 @@
 from collections import namedtuple
 
+import pyRofex
+
 import simple_trading_bot.conf.transaction_costs as tc
 
 
@@ -7,7 +9,6 @@ TradeInfo = namedtuple('TradeInfo', '')
 
 
 class Trader:
-
     def __init__(
             self,
             instrument_expert,
@@ -38,23 +39,24 @@ class Trader:
         available_buy_size = future_asks[ticker_to_buy]['size']
         available_sell_size = future_bids[ticker_to_sell]['size']
         amount_to_trade = min(
-            available_buy_size * future_to_buy.contract_size,
-            available_sell_size * future_to_sell.contract_size)
-        buy_size = int(amount_to_trade / future_to_buy.contract_size)
-        sell_size = int(amount_to_trade / future_to_sell.contract_size)
+            available_buy_size * future_to_buy.contract_size(),
+            available_sell_size * future_to_sell.contract_size())
+        buy_size = int(amount_to_trade / future_to_buy.contract_size())
+        sell_size = int(amount_to_trade / future_to_sell.contract_size())
         buy_price = future_asks[ticker_to_buy]['price']
         sell_price = future_bids[ticker_to_sell]['price']
 
-        buy_order = self._rofex_proxy.send_order(
-            ticker=ticker_to_buy,
-            side=pyRofex.Side.BUY,
-            size=amount_to_trade,
-            price=buy_price,
-            order_type=pyRofex.OrderType.MARKET)
+        if not self._data_update_watchman.should_update():
+            buy_order = self._rofex_proxy.place_order(
+                ticker=ticker_to_buy,
+                side=pyRofex.Side.BUY,
+                size=amount_to_trade,
+                price=buy_price,
+                order_type=pyRofex.OrderType.LIMIT)
 
-        sell_order = self._rofex_proxy.send_order(
-            ticker=ticker_to_sell,
-            side=pyRofex.Side.SELL,
-            size=amount_to_trade,
-            price=sell_price,
-            order_type=pyRofex.OrderType.MARKET)
+            sell_order = self._rofex_proxy.place_order(
+                ticker=ticker_to_sell,
+                side=pyRofex.Side.SELL,
+                size=amount_to_trade,
+                price=sell_price,
+                order_type=pyRofex.OrderType.LIMIT)

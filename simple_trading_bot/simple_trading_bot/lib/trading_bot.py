@@ -31,5 +31,6 @@ class IRTradingBot:
                 start = time.time()
                 self._ir_expert.update_rates()
                 print(f'Update rates took {time.time() - start}')
-                self._trader.evaluate_and_trade()
+                if self._ir_expert.ready():
+                    self._trader.evaluate_and_trade()
 

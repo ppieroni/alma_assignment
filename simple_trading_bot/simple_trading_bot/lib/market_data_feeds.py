@@ -88,6 +88,7 @@ class RofexProxy(MarketDataFeed):
         self._pyrofex_wrapper.market_data_subscription(
             tickers=self._futures_ticker,
             entries=self.DATA_ENTRIES)
+        self._pyrofex_wrapper.order_report_subscription()
 
     def asks(self):
         return self._asks.copy()
@@ -95,9 +96,8 @@ class RofexProxy(MarketDataFeed):
     def bids(self):
         return self._bids.copy()
 
-
-    def place_order(self):
-        pass
+    def place_order(self, *args, **kwargs):
+        return pyRofex.send_order(*args, **kwargs)
 
     def _market_data_handler(self, message):
         print("Market Data Message Received: {0}".format(message))
