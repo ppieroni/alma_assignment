@@ -2,10 +2,9 @@ import re
 import datetime as dt
 from dateutil.parser import parse
 from collections import defaultdict
-from pprint import pprint as pp
 
 import simple_trading_bot.lib.exceptions as exc
-from simple_trading_bot.lib.pyrofex_wrapper import PyRofexWrapper
+import simple_trading_bot.lib.pyrofex_wrapper as prw
 
 
 class Future:
@@ -66,7 +65,7 @@ class InstrumentExpert:
 
     def _load_rofex_instruments(self):
         futures_regexps = {ticker: re.compile(f'^{ticker}[A-Z][a-z][a-z]2.$') for ticker in self._tickers}
-        rest_instruments = PyRofexWrapper().get_detailed_instruments()
+        rest_instruments = prw.PyRofexWrapper().get_detailed_instruments()
         for instrument in rest_instruments['instruments']:
             for ticker, regexp in futures_regexps.items():
                 if regexp.match(instrument['instrumentId']['symbol']):
