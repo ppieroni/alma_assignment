@@ -21,10 +21,13 @@ class PyRofexWrapper:
             environment=self._environment)
 
     def __del__(self):
-        try:
-            pyRofex.close_websocket_connection(self._environment)
-        except:
-            pass
+        self.close_websocket_connection_safely()
 
     def __getattr__(self, attribute):
         return getattr(pyRofex, attribute)
+
+    def close_websocket_connection_safely(self):
+        try:
+            pyRofex.close_websocket_connection(self._environment)
+        except AttributeError:
+            pass

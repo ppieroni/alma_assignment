@@ -1,4 +1,3 @@
-import numpy as np
 
 
 class IRExpert:
@@ -15,30 +14,22 @@ class IRExpert:
         underlier_prices = self._yfinance_md_feed.last_prices()
         future_bids = self._rofex_proxy.bids()
         future_asks = self._rofex_proxy.asks()
-
         self._taker_rates = {}
         self._offered_rates = {}
-
         for ticker, underlier_price in underlier_prices.items():
             for future in self._futures_by_underlier_ticker[ticker]:
                 future_ticker = future.ticker()
                 days_to_maturity = future.days_to_maturity()
                 if future_ticker in future_bids:
                     self._taker_rates[future_ticker] = self._implicit_rate(
-                        future_bids[future_ticker]['price'],
+                        future_bids[future_ticker].price,
                         underlier_price,
                         days_to_maturity)
-                    print(f'Implicit taker rate {future_ticker}: {future_bids[future_ticker]["price"]}/{underlier_price} -> {self._taker_rates[future_ticker]}')
                 if future_ticker in future_asks:
                     self._offered_rates[future_ticker] = self._implicit_rate(
-                        future_asks[future_ticker]['price'],
+                        future_asks[future_ticker].price,
                         underlier_price,
                         days_to_maturity)
-                    print(f'Implicit offered rate {future_ticker}: {future_asks[future_ticker]["price"]}/{underlier_price} -> {self._offered_rates[future_ticker]}')
-        if self._taker_rates:
-            print(f'-----> Max taker rate:   {self.max_taker_rate()}')
-        if self._offered_rates:
-            print(f'-----> Min offered rate: {self.min_offered_rate()}')
 
     def max_taker_rate(self):
         return max(self._taker_rates.items(), key=lambda each: each[1])
@@ -50,7 +41,7 @@ class IRExpert:
         return self._taker_rates and self._offered_rates
 
     def _implicit_rate(self, maturity_price, current_price, days_to_maturity):
-        """Anualized implicit rate computed using Actual/DAYS_IN_A_YEAR day count convention with daily compounding"""
+        """Anualized implicit rate computed using Actual/DAYS_IN_A_YEAR day count convention and daily compounding"""
         return ((maturity_price / current_price) ** (1 / days_to_maturity) - 1) * self.DAYS_IN_A_YEAR
 
 

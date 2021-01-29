@@ -1,4 +1,5 @@
 import time
+import traceback
 
 from simple_trading_bot.lib.ir_expert import IRExpert
 from simple_trading_bot.lib.market_data_feeds import RofexProxy, YfinanceMDFeed
@@ -7,12 +8,12 @@ from simple_trading_bot.lib.data_update_watchman import DataUpdateWatchman
 from simple_trading_bot.lib.trader import Trader
 
 
-class IRTradingBot:
+class IRArbitrageTradingBot:
 
-    def __init__(self, tickers):
+    def __init__(self, tickers, spot_update_frequency):
         self._instrument_expert = InstrumentExpert(tickers)
         self._rofex_proxy = RofexProxy(self._instrument_expert)
-        self._yfinance_md_feed = YfinanceMDFeed(self._instrument_expert, 1)
+        self._yfinance_md_feed = YfinanceMDFeed(self._instrument_expert, spot_update_frequency)
         self._data_update_watchman = DataUpdateWatchman(self._rofex_proxy, self._yfinance_md_feed)
         self._ir_expert = IRExpert(self._instrument_expert, self._rofex_proxy, self._yfinance_md_feed)
         self._trader = Trader(
@@ -22,15 +23,32 @@ class IRTradingBot:
             self._yfinance_md_feed,
             self._data_update_watchman)
 
-    def start(self):
+    def launch(self):
+        self._start()
+        self._run()
+        self._finish()
+
+    def _start(self):
         self._yfinance_md_feed.start_listening()
         self._rofex_proxy.start_listening()
-        while True:
-            if self._data_update_watchman.should_update():
-                self._data_update_watchman.set_last_timestamp()
-                start = time.time()
-                self._ir_expert.update_rates()
-                print(f'Update rates took {time.time() - start}')
-                if self._ir_expert.ready():
-                    self._trader.evaluate_and_trade()
 
+    def _run(self):
+        while True:
+            try:
+                if self._data_update_watchman.should_update():
+                    self._data_update_watchman.set_last_timestamp()
+                    self._ir_expert.update_rates()
+                    if self._ir_expert.ready():
+                        self._trader.evaluate_and_trade()
+            except Exception as e:
+                traceback.print_exc()
+                print(f'Exception occurred during trading')
+                break
+            if not self._rofex_proxy.running():
+                self._yfinance_md_feed.start_listening()
+            if not self._rofex_proxy.running():
+                self._rofex_proxy.start_listening()
+
+    def _finish(self):
+        self._yfinance_md_feed.stop()
+        self._rofex_proxy.stop()
