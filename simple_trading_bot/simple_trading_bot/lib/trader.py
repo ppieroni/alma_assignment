@@ -46,8 +46,8 @@ class Trader:
         amount_to_trade = min(
             available_buy_size * future_to_buy.contract_size() * underlier_buy_price,
             available_sell_size * future_to_sell.contract_size() * underlier_sell_price)
-        buy_size = int(amount_to_trade / future_to_buy.contract_size() / underlier_buy_price)
-        sell_size = int(amount_to_trade / future_to_sell.contract_size() / underlier_sell_price)
+        buy_size = int(amount_to_trade / future_to_buy.contract_size() / underlier_sell_price + 0.5)
+        sell_size = int(amount_to_trade / future_to_sell.contract_size() / underlier_buy_price + 0.5)
         buy_price = future_asks[ticker_to_buy].price
         sell_price = future_bids[ticker_to_sell].price
         underlier_buy_size = sell_size * future_to_sell.contract_size()
@@ -57,20 +57,20 @@ class Trader:
                                underlier_sell_size * underlier_sell_price) * 0.5
 
         if not self._data_update_watchman.should_update() and (buy_size * sell_size) > 0:
-            buy_order = self._rofex_proxy.place_order(
-                ticker=ticker_to_buy,
-                side=pyRofex.Side.BUY,
-                size=buy_size,
-                price=buy_price,
-                time_in_force=pyRofex.TimeInForce.FillOrKill,
-                order_type=pyRofex.OrderType.LIMIT)
-            sell_order = self._rofex_proxy.place_order(
-                ticker=ticker_to_sell,
-                side=pyRofex.Side.SELL,
-                size=sell_size,
-                price=sell_price,
-                time_in_force=pyRofex.TimeInForce.FillOrKill,
-                order_type=pyRofex.OrderType.LIMIT)
+            # buy_order = self._rofex_proxy.place_order(
+            #     ticker=ticker_to_buy,
+            #     side=pyRofex.Side.BUY,
+            #     size=buy_size,
+            #     price=buy_price,
+            #     time_in_force=pyRofex.TimeInForce.FillOrKill,
+            #     order_type=pyRofex.OrderType.LIMIT)
+            # sell_order = self._rofex_proxy.place_order(
+            #     ticker=ticker_to_sell,
+            #     side=pyRofex.Side.SELL,
+            #     size=sell_size,
+            #     price=sell_price,
+            #     time_in_force=pyRofex.TimeInForce.FillOrKill,
+            #     order_type=pyRofex.OrderType.LIMIT)
 
             trade_info = [
                 f'--- Trade Info For Tenure {maturity_tag} ---',
@@ -78,14 +78,18 @@ class Trader:
                 f'Buy:      {ticker_to_buy:<12} -> {buy_size:>8} @ {buy_price}',
                 f'Sell:     {underlier_to_sell:<12} -> {underlier_sell_size:>8} @ {underlier_sell_price}',
                 f'Imp Rate: {min_offered_rate}',
+                f'Traded amount: {underlier_sell_size * underlier_sell_price}',
+                f'---',
                 f'Rate short side:',
                 f'Sell:     {ticker_to_sell:<12} -> {sell_size:>8} @ {sell_price}',
                 f'Buy:      {underlier_to_buy:<12} -> {underlier_buy_size:>8} @ {underlier_buy_price}',
                 f'Imp Rate: {max_taker_rate}',
+                f'Traded amount: {underlier_buy_size * underlier_buy_price}',
                 f'--------------------------------------------',
                 f'Trade rate profit:     {trade_rate_profit}',
                 f'Average position size: {av_position_to_take}',
-                f'--------------------------------------------']
+                f'--------------------------------------------',
+                '']
 
             print('\n'.join(trade_info), flush=True)
 
