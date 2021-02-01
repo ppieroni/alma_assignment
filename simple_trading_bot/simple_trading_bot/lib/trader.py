@@ -57,37 +57,41 @@ class Trader:
                                underlier_sell_size * underlier_sell_price) * 0.5
 
         if not self._data_update_watchman.should_update() and (buy_size * sell_size) > 0:
-            # buy_order = self._rofex_proxy.place_order(
-            #     ticker=ticker_to_buy,
-            #     side=pyRofex.Side.BUY,
-            #     size=buy_size,
-            #     price=buy_price,
-            #     time_in_force=pyRofex.TimeInForce.FillOrKill,
-            #     order_type=pyRofex.OrderType.LIMIT)
-            # sell_order = self._rofex_proxy.place_order(
-            #     ticker=ticker_to_sell,
-            #     side=pyRofex.Side.SELL,
-            #     size=sell_size,
-            #     price=sell_price,
-            #     time_in_force=pyRofex.TimeInForce.FillOrKill,
-            #     order_type=pyRofex.OrderType.LIMIT)
+            buy_order = self._rofex_proxy.place_order(
+                ticker=ticker_to_buy,
+                side=pyRofex.Side.BUY,
+                size=buy_size,
+                price=buy_price,
+                time_in_force=pyRofex.TimeInForce.ImmediateOrCancel,
+                order_type=pyRofex.OrderType.LIMIT)
+            sell_order = self._rofex_proxy.place_order(
+                ticker=ticker_to_sell,
+                side=pyRofex.Side.SELL,
+                size=sell_size,
+                price=sell_price,
+                time_in_force=pyRofex.TimeInForce.ImmediateOrCancel,
+                order_type=pyRofex.OrderType.LIMIT)
 
             trade_info = [
                 f'--- Trade Info For Tenure {maturity_tag} ---',
                 'Rate long side:',
-                f'Buy:      {ticker_to_buy:<12} -> {buy_size:>8} @ {buy_price}',
-                f'Sell:     {underlier_to_sell:<12} -> {underlier_sell_size:>8} @ {underlier_sell_price}',
-                f'Imp Rate: {min_offered_rate}',
-                f'Traded amount: {underlier_sell_size * underlier_sell_price}',
+                f'Buy:      {ticker_to_buy:<12} -> {buy_size:>8} @ {buy_price:.2f}',
+                f'Sell:     {underlier_to_sell:<12} -> {underlier_sell_size:>8} @ {underlier_sell_price:.2f}',
+                f'Imp Rate: {min_offered_rate:.6f}',
+                f'Traded amount: {underlier_sell_size * underlier_sell_price:.2f}',
+                f'Order reception info:   {buy_order}',
+                f'Order execution status: {self._rofex_proxy.order_execution_status(buy_order["order"]["clientId"])}',
                 f'---',
                 f'Rate short side:',
-                f'Sell:     {ticker_to_sell:<12} -> {sell_size:>8} @ {sell_price}',
-                f'Buy:      {underlier_to_buy:<12} -> {underlier_buy_size:>8} @ {underlier_buy_price}',
-                f'Imp Rate: {max_taker_rate}',
-                f'Traded amount: {underlier_buy_size * underlier_buy_price}',
+                f'Sell:     {ticker_to_sell:<12} -> {sell_size:>8} @ {sell_price:.2f}',
+                f'Buy:      {underlier_to_buy:<12} -> {underlier_buy_size:>8} @ {underlier_buy_price:.2f}',
+                f'Imp Rate: {max_taker_rate:.6f}',
+                f'Traded amount: {underlier_buy_size * underlier_buy_price:.2f}',
+                f'Order reception info:   {sell_order}',
+                f'Order execution status: {self._rofex_proxy.order_execution_status(sell_order["order"]["clientId"])}',
                 f'--------------------------------------------',
-                f'Trade rate profit:     {trade_rate_profit}',
-                f'Average position size: {av_position_to_take}',
+                f'Trade rate profit:     {trade_rate_profit:.6f}',
+                f'Average position size: {av_position_to_take:.2f}',
                 f'--------------------------------------------',
                 '']
 

@@ -134,6 +134,12 @@ class RofexProxy(MarketDataFeed):
     def place_order(self, *args, **kwargs):
         return self._pyrofex_wrapper.send_order(*args, **kwargs)
 
+    def get_order_status(self, *args, **kwargs):
+        return self._pyrofex_wrapper.get_order_status(*args, **kwargs)
+
+    def order_execution_status(self, order_id):
+        return self.get_order_status(order_id)['order']['status']
+
     def _market_data_handler(self, message):
         try:
             print(f'Rofex Market Data Received {message}', flush=True)

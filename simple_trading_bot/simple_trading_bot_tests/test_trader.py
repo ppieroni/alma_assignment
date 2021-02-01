@@ -26,6 +26,8 @@ class TestTrader(unittest.TestCase):
             'GGALFeb21': mdf.OrderbookLevel(115, 10), 'DOFeb21': mdf.OrderbookLevel(125, 10)}
         self._rofex_proxy_mock.asks.return_value = {
             'GGALFeb21': mdf.OrderbookLevel(120, 10), 'DOFeb21': mdf.OrderbookLevel(130, 10)}
+        self._rofex_proxy_mock.place_order.return_value = {'order': {'clientId': 'test_order_id'}}
+        self._rofex_proxy_mock.order_execution_status.return_value = 'THIS IS A TEST'
         self._instrument_expert_mock = MagicMock()
         self._maturity_date = dt.datetime(2021, 6, 30, 0, 0, 0, 0)
         ggal_future = Future('GGALFeb21', self._maturity_date, 'GGAL', 100.)
@@ -66,14 +68,14 @@ class TestTrader(unittest.TestCase):
         self.assertEqual(buy_order_args.kwargs['side'], pyRofex.Side.BUY)
         self.assertEqual(buy_order_args.kwargs['size'], 10)
         self.assertEqual(buy_order_args.kwargs['price'], 120)
-        self.assertEqual(buy_order_args.kwargs['time_in_force'], pyRofex.TimeInForce.FillOrKill)
+        self.assertEqual(buy_order_args.kwargs['time_in_force'], pyRofex.TimeInForce.ImmediateOrCancel)
         self.assertEqual(buy_order_args.kwargs['order_type'], pyRofex.OrderType.LIMIT)
 
         self.assertEqual(sell_order_args.kwargs['ticker'], 'DOFeb21')
         self.assertEqual(sell_order_args.kwargs['side'], pyRofex.Side.SELL)
         self.assertEqual(sell_order_args.kwargs['size'], 1)
         self.assertEqual(sell_order_args.kwargs['price'], 125)
-        self.assertEqual(sell_order_args.kwargs['time_in_force'], pyRofex.TimeInForce.FillOrKill)
+        self.assertEqual(sell_order_args.kwargs['time_in_force'], pyRofex.TimeInForce.ImmediateOrCancel)
         self.assertEqual(sell_order_args.kwargs['order_type'], pyRofex.OrderType.LIMIT)
 
     @freeze_time(TODAY)
