@@ -1,3 +1,5 @@
+import copy
+import sys
 import threading
 import time
 from collections import defaultdict, namedtuple
@@ -41,22 +43,27 @@ class YfinanceMDFeed(MarketDataFeed):
 
     def __init__(self, instrument_expert, update_frequency):
         super().__init__()
-        self._tickers = instrument_expert.yfinance_tickers()
+        self._tickers = instrument_expert.tradeable_yfinance_tickers()
         self._inverse_ticker_map = instrument_expert.inverse_yfinance_tickers_map()
         self._update_frequency = update_frequency
         self._listening_thread = None
         self._prices = {}
 
     def start_listening(self):
+        print('YFinaince MD Feed is starting listening...')
         self._listening_thread = threading.Thread(target=self._update_prices)
-        self._started = True
+        self._running = True
         self._listening_thread.start()
+        print('Started')
 
     def last_prices(self):
         return self._prices.copy()
 
+    def price(self, ticker):
+        return self._prices.get(ticker, 0.)
+
     def _update_prices(self):
-        while self._started:
+        while self._running:
             try:
                 data = yfinance.download(
                     tickers=self._tickers,
@@ -65,7 +72,7 @@ class YfinanceMDFeed(MarketDataFeed):
                     progress=False)
                 start = time.time()
                 prices = data['Close'].to_dict(orient='records')[0]
-                print(f'Updating spot prices {prices}')
+                print(f'Updating spot prices {prices}', flush=True)
                 if any((price - self._prices.get(self._inverse_ticker_map[ticker], 0.) > FLOAT_LIMIT)
                        for ticker, price in prices.items()):
                     self._prices = {self._inverse_ticker_map[ticker]: price for ticker, price in prices.items()}
@@ -83,12 +90,13 @@ class RofexProxy(MarketDataFeed):
         pyRofex.MarketDataEntry.BIDS,
         pyRofex.MarketDataEntry.OFFERS]
 
-    def __init__(self, instrument_expert):
+    def __init__(self, instrument_expert, subscribe_to_order_report=False):
         super().__init__()
-        self._futures_ticker = instrument_expert.futures_ticker()
+        self._futures_ticker = instrument_expert.tradeable_rofex_tickers()
         self._pyrofex_wrapper = prw.PyRofexWrapper()
-        self._bids = defaultdict(dict)
-        self._asks = defaultdict(dict)
+        self._bids = {}
+        self._asks = {}
+        self._subscribe_to_order_report = subscribe_to_order_report
 
     def __str__(self):
         repr_str = ''
@@ -100,6 +108,8 @@ class RofexProxy(MarketDataFeed):
         return repr_str
 
     def start_listening(self):
+        print('Rofex starting listening')
+        self._runnning = True
         self._pyrofex_wrapper.init_websocket_connection(
             market_data_handler=self._market_data_handler,
             order_report_handler=self._order_report_handler,
@@ -108,23 +118,26 @@ class RofexProxy(MarketDataFeed):
         self._pyrofex_wrapper.market_data_subscription(
             tickers=self._futures_ticker,
             entries=self.DATA_ENTRIES)
-        self._pyrofex_wrapper.order_report_subscription()
+        if self._subscribe_to_order_report:
+            self._pyrofex_wrapper.order_report_subscription()
+        print('Started')
 
     def stop(self):
         super().stop()
         self._pyrofex_wrapper.close_websocket_connection_safely()
 
     def asks(self):
-        return self._asks.copy()
+        return copy.deepcopy(self._asks)
 
     def bids(self):
-        return self._bids.copy()
+        return copy.deepcopy(self._bids)
 
     def place_order(self, *args, **kwargs):
-        return pyRofex.send_order(*args, **kwargs)
+        return self._pyrofex_wrapper.send_order(*args, **kwargs)
 
     def _market_data_handler(self, message):
         try:
+            print(f'Rofex Market Data Received {message}', flush=True)
             ticker = message['instrumentId']['symbol']
             market_data = message['marketData']
             if market_data[pyRofex.MarketDataEntry.OFFERS.value]:
@@ -139,17 +152,16 @@ class RofexProxy(MarketDataFeed):
             print(f'Exception ocurred during market data handling. Stopping Rofex...')
             self.stop()
 
-
     def _order_report_handler(self, message):
-        print('Order Report Message Received:')
+        print('============ Order Report Message Received ==============')
         pprint(message)
+        print('=========================================================')
+        sys.stdout.flush()
 
     def _error_handler(self, message):
-        print(f'Error Message Received: {message}')
+        print(f'Rofex Error Message Received: {message}')
         self.stop()
 
     def _exception_handler(self, e):
-        print(f'Exception Occurred: {message}')
+        print(f'Rofex Exception Occurred: {message}')
         self.stop()
-
-

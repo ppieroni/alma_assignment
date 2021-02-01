@@ -39,7 +39,7 @@ class IRArbitrageTradingBot:
                     self._data_update_watchman.set_last_timestamp()
                     self._ir_expert.update_rates()
                     if self._ir_expert.ready():
-                        self._trader.evaluate_and_trade()
+                        self._trader.evaluate_and_trade_each_maturiry()
             except Exception as e:
                 traceback.print_exc()
                 print(f'Exception occurred during trading')

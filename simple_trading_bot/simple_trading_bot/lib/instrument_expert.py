@@ -33,7 +33,7 @@ class Future:
     def days_to_maturity(self, start_date=None):
         start_date = start_date or dt.datetime.now()
         delta = self._maturity_date.date() - start_date.date()
-        if delta.days <= 0:
+        if delta.days + 1 <= 0:
             raise exc.ExpiredInstrument(self)
         return delta.days
 
@@ -42,10 +42,11 @@ class InstrumentExpert:
 
     def __init__(self, tickers):
         self._tickers = tickers
-        self._rofex_instrument_by_underlier = defaultdict(list)
+        self._rofex_instruments_by_underlier = defaultdict(list)
+        self._rofex_instruments_by_maturity = defaultdict(list)
         self._yfinance_tickers_map = {ticker: self._yfinance_ticker(ticker) for ticker in tickers}
         self._inverse_yfinance_tickers_map = {v: k for k, v in self._yfinance_tickers_map.items()}
-        self._rofex_instruments_by_ticker = dict()
+        self._rofex_instruments_by_ticker = {}
         self._load_rofex_instruments()
 
     def futures_ticker(self):
@@ -57,11 +58,40 @@ class InstrumentExpert:
     def inverse_yfinance_tickers_map(self):
         return self._inverse_yfinance_tickers_map.copy()
 
-    def rofex_instrument_by_underlier(self):
-        return self._rofex_instrument_by_underlier.copy()
+    def rofex_instruments_by_underlier(self):
+        return copy.deepcopy(self._rofex_instruments_by_underlier)
+
+    def rofex_instruments_by_maturity(self):
+        return copy.deepcopy(self._rofex_instruments_by_maturity)
 
     def rofex_instruments_by_ticker(self):
         return self._rofex_instruments_by_ticker.copy()
+
+    def tradeable_maturity_tags(self):
+        return list(self.tradeable_rofex_intruments_by_maturity().keys())
+
+    def tradeable_rofex_intruments_by_maturity(self):
+        return {maturity: instruments for maturity, instruments in self._rofex_instruments_by_maturity.items()
+                if len(instruments) > 1}
+
+    def maturities_of_tradeable_tickers(self):
+        return {instrument.ticker(): maturity
+                for maturity, instruments in self.tradeable_rofex_intruments_by_maturity().items()
+                for instrument in instruments}
+
+    def tradeable_rofex_instruments(self):
+        return sum(self.tradeable_rofex_intruments_by_maturity().values(), [])
+
+    def tradeable_rofex_tickers(self):
+        return [future._ticker for future in self.tradeable_rofex_instruments()]
+
+    def tradeable_rofex_instruments_by_underlier_ticker(self):
+        tradeable_ticekrs = self.tradeable_rofex_tickers()
+        return {underlier: [instrument for instrument in instruments if instrument.ticker() in tradeable_ticekrs]
+                for underlier, instruments in self._rofex_instruments_by_underlier.items()}
+
+    def tradeable_yfinance_tickers(self):
+        return list(set(future._underlier_ticker for future in self.tradeable_rofex_instruments()))
 
     def _load_rofex_instruments(self):
         futures_regexps = {ticker: re.compile(f'^{ticker}[A-Z][a-z][a-z]2.$') for ticker in self._tickers}
@@ -73,7 +103,8 @@ class InstrumentExpert:
                     maturity_date = parse(instrument['maturityDate'])
                     contract_size = instrument['contractMultiplier']
                     future = Future(rofex_ticker, maturity_date, ticker, contract_size)
-                    self._rofex_instrument_by_underlier[ticker].append(future)
+                    self._rofex_instruments_by_underlier[ticker].append(future)
+                    self._rofex_instruments_by_maturity[rofex_ticker.replace(ticker, '')].append(future)
                     self._rofex_instruments_by_ticker[rofex_ticker] = future
 
     @staticmethod
