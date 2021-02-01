@@ -91,7 +91,8 @@ class InstrumentExpert:
                 for underlier, instruments in self._rofex_instruments_by_underlier.items()}
 
     def tradeable_yfinance_tickers(self):
-        return list(set(future._underlier_ticker for future in self.tradeable_rofex_instruments()))
+        return list(set(self._yfinance_tickers_map[future._underlier_ticker]
+                        for future in self.tradeable_rofex_instruments()))
 
     def _load_rofex_instruments(self):
         futures_regexps = {ticker: re.compile(f'^{ticker}[A-Z][a-z][a-z]2.$') for ticker in self._tickers}

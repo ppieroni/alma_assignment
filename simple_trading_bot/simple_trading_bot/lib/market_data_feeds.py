@@ -72,12 +72,11 @@ class YfinanceMDFeed(MarketDataFeed):
                     progress=False)
                 start = time.time()
                 prices = data['Close'].to_dict(orient='records')[0]
-                print(f'Updating spot prices {prices}', flush=True)
                 if any((price - self._prices.get(self._inverse_ticker_map[ticker], 0.) > FLOAT_LIMIT)
                        for ticker, price in prices.items()):
                     self._prices = {self._inverse_ticker_map[ticker]: price for ticker, price in prices.items()}
                     self._update_last_timestamp()
-                    print(f'updated {self._prices}')
+                    print(f'Updated {self._prices}', flush=True)
                 time.sleep(self._update_frequency)
             except Exception as e:
                 traceback.print_exc()
@@ -109,7 +108,7 @@ class RofexProxy(MarketDataFeed):
 
     def start_listening(self):
         print('Rofex starting listening')
-        self._runnning = True
+        self._running = True
         self._pyrofex_wrapper.init_websocket_connection(
             market_data_handler=self._market_data_handler,
             order_report_handler=self._order_report_handler,
@@ -134,6 +133,12 @@ class RofexProxy(MarketDataFeed):
 
     def place_order(self, *args, **kwargs):
         return self._pyrofex_wrapper.send_order(*args, **kwargs)
+
+    def get_order_status(self, *args, **kwargs):
+        return self._pyrofex_wrapper.get_order_status(*args, **kwargs)
+
+    def order_execution_status(self, order_id):
+        return self.get_order_status(order_id)['order']['status']
 
     def _market_data_handler(self, message):
         try:
