@@ -6,6 +6,7 @@ chardet==4.0.0
 decorator==4.4.2
 enum34==1.1.10
 forex-python==1.5
+freezegun==1.1.0
 idna==2.10
 inflection==0.5.1
 ipython==7.19.0
@@ -29,6 +30,7 @@ Quandl==3.6.0
 requests==2.25.1
 simplejson==3.17.2
 six==1.15.0
+tabulate==0.8.7
 traitlets==5.0.5
 urllib3==1.26.2
 wcwidth==0.2.5

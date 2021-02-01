@@ -55,7 +55,6 @@ class Trader:
         trade_rate_profit = (max_taker_rate - min_offered_rate)
         av_position_to_take = (underlier_buy_size * underlier_buy_price +
                                underlier_sell_size * underlier_sell_price) * 0.5
-
         if not self._data_update_watchman.should_update() and (buy_size * sell_size) > 0:
             buy_order = self._rofex_proxy.place_order(
                 ticker=ticker_to_buy,
