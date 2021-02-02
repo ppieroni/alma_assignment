@@ -40,6 +40,10 @@ class MarketDataFeed:
 
 
 class YfinanceMDFeed(MarketDataFeed):
+    """
+    Class to retrieve prices from yahoo finance.
+    Data will be refreshed on a configurable regular basis.
+    """
 
     def __init__(self, instrument_expert, update_frequency):
         super().__init__()
@@ -50,6 +54,7 @@ class YfinanceMDFeed(MarketDataFeed):
         self._prices = {}
 
     def start_listening(self):
+        """Starts data retrieving"""
         print('YFinaince MD Feed is starting listening...')
         self._listening_thread = threading.Thread(target=self._update_prices)
         self._running = True
@@ -63,6 +68,7 @@ class YfinanceMDFeed(MarketDataFeed):
         return self._prices.get(ticker, 0.)
 
     def _update_prices(self):
+        """Process retrieved data"""
         while self._running:
             try:
                 data = yfinance.download(
@@ -72,6 +78,7 @@ class YfinanceMDFeed(MarketDataFeed):
                     progress=False)
                 start = time.time()
                 prices = data['Close'].to_dict(orient='records')[0]
+                #Prices will be updated only on change
                 if any((price - self._prices.get(self._inverse_ticker_map[ticker], 0.) > FLOAT_LIMIT)
                        for ticker, price in prices.items()):
                     self._prices = {self._inverse_ticker_map[ticker]: price for ticker, price in prices.items()}
@@ -85,6 +92,11 @@ class YfinanceMDFeed(MarketDataFeed):
 
 
 class RofexProxy(MarketDataFeed):
+    """
+    Class used as a proxy for rofex.
+    Main responsabilities are data retrieving and order placing and tracking.
+    Stands on pyRofex package (https://github.com/matbarofex/pyRofex) through PyRofexWrapper class.
+    """
     DATA_ENTRIES = [
         pyRofex.MarketDataEntry.BIDS,
         pyRofex.MarketDataEntry.OFFERS]
@@ -109,6 +121,7 @@ class RofexProxy(MarketDataFeed):
         return repr_str
 
     def start_listening(self):
+        """Starts data retrieving"""
         print('Rofex starting listening')
         self._running = True
         self._pyrofex_wrapper.init_websocket_connection(
@@ -119,6 +132,7 @@ class RofexProxy(MarketDataFeed):
         self._pyrofex_wrapper.market_data_subscription(
             tickers=self._futures_ticker,
             entries=self.DATA_ENTRIES)
+        #Set this True to recieve order updates through websocket
         if self._subscribe_to_order_report:
             self._pyrofex_wrapper.order_report_subscription()
         print('Started')
@@ -147,6 +161,10 @@ class RofexProxy(MarketDataFeed):
         return self.get_order_status(order_id)['order']['status']
 
     def _market_data_handler(self, message):
+        """
+        Handles market data messages recieved through websocket
+        Parses the data and keeps bid/ask information for each ticker
+        """
         try:
             print(f'Rofex Market Data Received {message}\n', flush=True)
             ticker = message['instrumentId']['symbol']

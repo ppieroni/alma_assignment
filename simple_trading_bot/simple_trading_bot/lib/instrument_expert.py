@@ -8,6 +8,9 @@ import simple_trading_bot.lib.pyrofex_wrapper as prw
 
 
 class Future:
+    """
+    Class to represent future contracts
+    """
 
     def __init__(self, ticker, maturity_date, underlier_ticker, contract_size):
         self._ticker = ticker
@@ -31,6 +34,10 @@ class Future:
         return self._contract_size
 
     def days_to_maturity(self, start_date=None):
+        """
+        Computes the days remaining to maturity.
+        Approximation: each day counts as a whole day
+        """
         start_date = start_date or dt.datetime.now()
         delta = self._maturity_date.date() - start_date.date()
         if delta.days + 1 <= 0:
@@ -39,6 +46,10 @@ class Future:
 
 
 class InstrumentExpert:
+    """
+    Class to handle any technicality related to instruments.
+    """
+    # TODO: Logic to determine whether an instrument is tradeable or not should not be here.
 
     def __init__(self, tickers):
         self._tickers = tickers
@@ -95,6 +106,9 @@ class InstrumentExpert:
                         for future in self.tradeable_rofex_instruments()))
 
     def _load_rofex_instruments(self):
+        """
+        Logic to parse rofex instruments
+        """
         futures_regexps = {ticker: re.compile(f'^{ticker}[A-Z][a-z][a-z]2.$') for ticker in self._tickers}
         rest_instruments = prw.PyRofexWrapper().get_detailed_instruments()
         for instrument in rest_instruments['instruments']:
