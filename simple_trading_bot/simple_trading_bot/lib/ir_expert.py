@@ -3,6 +3,9 @@ from collections import defaultdict
 
 
 class IRExpert:
+    """
+    Class to compute implicit rates
+    """
     DAYS_IN_A_YEAR = 365
 
     def __init__(self, instrument_expert, rofex_proxy, yfinance_md_feed):
@@ -14,6 +17,9 @@ class IRExpert:
         self._offered_rates = defaultdict(dict)
 
     def update_rates(self):
+        """
+        Updates the implicit rates and organize them by maturity date and ticker
+        """
         underlier_prices = self._yfinance_md_feed.last_prices()
         future_bids = self._rofex_proxy.bids()
         future_asks = self._rofex_proxy.asks()
@@ -54,7 +60,10 @@ class IRExpert:
         return self._taker_rates[maturity_tag] and self._offered_rates[maturity_tag]
 
     def _implicit_rate(self, maturity_price, current_price, days_to_maturity):
-        """Anualized implicit rate computed using Actual/DAYS_IN_A_YEAR day count convention and daily compounding"""
+        """
+        Anualized implicit rate computed using Actual/DAYS_IN_A_YEAR
+        day count convention and daily compounding.
+        """
         return ((maturity_price / current_price) ** (1 / days_to_maturity) - 1) * self.DAYS_IN_A_YEAR
 
 

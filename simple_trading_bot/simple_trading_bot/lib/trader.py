@@ -6,6 +6,9 @@ import simple_trading_bot.conf.transaction_costs as tc
 
 
 class Trader:
+    """
+    Class to detect IR arbitrage opportunities and place orders in the exchange.
+    """
     def __init__(
             self,
             instrument_expert,
@@ -26,14 +29,17 @@ class Trader:
                 self.evaluate_and_trade_single_maturity(maturity_tag)
 
     def evaluate_and_trade_single_maturity(self, maturity_tag):
+        """Look for implicit rate arbitrage opportunities and place orders if found."""
+        #Try to sell the more expensive taker and buy the cheaper offered.
         ticker_to_sell, max_taker_rate = self._ir_expert.max_taker_rate(maturity_tag=maturity_tag)
         ticker_to_buy, min_offered_rate = self._ir_expert.min_offered_rate(maturity_tag=maturity_tag)
-        #Strong assumption: transaction cost can be expressed as a constant rate difference
+        #Strong assumption: transaction cost can be expressed as a constant rate difference.
         if not max_taker_rate - min_offered_rate > tc.TRANSACITON_COST:
             return
+        #If arb opportunity found determines the trade size.
         future_to_buy = self._futures_by_ticker[ticker_to_buy]
         future_to_sell = self._futures_by_ticker[ticker_to_sell]
-
+        #Get the spot prices for the underliers.
         underlier_to_buy = future_to_sell.underlier_ticker()
         underlier_buy_price = self._yfinance_md_feed.price(underlier_to_buy)
         underlier_to_sell = future_to_buy.underlier_ticker()
@@ -43,18 +49,22 @@ class Trader:
         future_bids = self._rofex_proxy.bids()
         available_buy_size = future_asks[ticker_to_buy].size
         available_sell_size = future_bids[ticker_to_sell].size
+        #Minimum available size in cash amount.
         amount_to_trade = min(
-            available_buy_size * future_to_buy.contract_size() * underlier_buy_price,
-            available_sell_size * future_to_sell.contract_size() * underlier_sell_price)
+            available_buy_size * future_to_buy.contract_size() * underlier_sell_price,
+            available_sell_size * future_to_sell.contract_size() * underlier_buy_price)
+        #Round up the sizes (in contract units). This has issues when few contracts are available.
         buy_size = int(amount_to_trade / future_to_buy.contract_size() / underlier_sell_price + 0.5)
         sell_size = int(amount_to_trade / future_to_sell.contract_size() / underlier_buy_price + 0.5)
         buy_price = future_asks[ticker_to_buy].price
         sell_price = future_bids[ticker_to_sell].price
         underlier_buy_size = sell_size * future_to_sell.contract_size()
         underlier_sell_size = buy_size * future_to_buy.contract_size()
-        trade_rate_profit = (max_taker_rate - min_offered_rate)
+        #Estimate the proffit.
+        trade_rate_profit = (max_taker_rate - min_offered_rate - tc.TRANSACITON_COST)
         av_position_to_take = (underlier_buy_size * underlier_buy_price +
                                underlier_sell_size * underlier_sell_price) * 0.5
+        #If the data is not ahead and order sizes make sense, place orders and print trade info.
         if not self._data_update_watchman.should_update() and (buy_size * sell_size) > 0:
             buy_order = self._rofex_proxy.place_order(
                 ticker=ticker_to_buy,
@@ -71,6 +81,8 @@ class Trader:
                 time_in_force=pyRofex.TimeInForce.ImmediateOrCancel,
                 order_type=pyRofex.OrderType.LIMIT)
 
+            #TODO: improve order tracking.
+            #TODO: wrap trade info and use a printer class.
             trade_info = [
                 f'--- Trade Info For Tenure {maturity_tag} ---',
                 'Rate long side:',

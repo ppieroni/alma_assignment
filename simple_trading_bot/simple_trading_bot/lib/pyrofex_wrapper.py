@@ -5,6 +5,9 @@ from simple_trading_bot.lib.singleton_metaclass import SingletonMetaClass
 
 
 class PyRofexWrapper:
+    """
+    Class to ensure one and only one instance of pyRofex is initialized.
+    """
     __metaclass__ = SingletonMetaClass
 
     def __init__(

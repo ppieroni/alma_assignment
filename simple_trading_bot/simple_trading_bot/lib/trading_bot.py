@@ -38,7 +38,7 @@ class IRArbitrageTradingBot:
         while True:
             try:
                 if self._data_update_watchman.should_update():
-                    self._data_update_watchman.set_last_timestamp()
+                    self._data_update_watchman.set_last_processed_timestamp()
                     self._ir_expert.update_rates()
                     if self._ir_expert.ready():
                         self._ir_printer.print_rates()
