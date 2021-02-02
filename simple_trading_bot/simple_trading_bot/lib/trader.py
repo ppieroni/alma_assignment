@@ -60,12 +60,14 @@ class Trader:
         sell_price = future_bids[ticker_to_sell].price
         underlier_buy_size = sell_size * future_to_sell.contract_size()
         underlier_sell_size = buy_size * future_to_buy.contract_size()
-        #Estimate the proffit.
+        #Estimate the profit.
         trade_rate_profit = (max_taker_rate - min_offered_rate - tc.TRANSACITON_COST)
         av_position_to_take = (underlier_buy_size * underlier_buy_price +
                                underlier_sell_size * underlier_sell_price) * 0.5
         #If the data is not ahead and order sizes make sense, place orders and print trade info.
         if not self._data_update_watchman.should_update() and (buy_size * sell_size) > 0:
+            #Either pyRofex or remarkets seems not to be allowing Market orders
+            #so we need to use Limits with the correct price
             buy_order = self._rofex_proxy.place_order(
                 ticker=ticker_to_buy,
                 side=pyRofex.Side.BUY,
