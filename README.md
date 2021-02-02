@@ -164,7 +164,7 @@ They were not tackled mostly because some lower hanging fruits were found.
 '* i.e. 2 contracts of `GGALAbr21` vs 1 contract of `DOAbr21`,
 which will imply a very unbalanced trade due to the contract sizes
 
-####Financial
+#### Financial
 - The day count to maturity is calculated in days in a very simple way (number of days until maturity + 1). 
   This approach has issues when maturity is close, and when the compared contracts 
   do not have exactly the same maturity date.
