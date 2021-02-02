@@ -1,3 +1,4 @@
+import copy
 from collections import defaultdict
 
 
@@ -33,6 +34,12 @@ class IRExpert:
                         future_asks[future_ticker].price,
                         underlier_price,
                         days_to_maturity)
+
+    def taker_rates(self):
+        return copy.deepcopy(self._taker_rates)
+
+    def offered_rates(self):
+        return copy.deepcopy(self._offered_rates)
 
     def max_taker_rate(self, maturity_tag):
         return max(self._taker_rates[maturity_tag].items(), key=lambda each: each[1])

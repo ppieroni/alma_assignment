@@ -76,7 +76,7 @@ class YfinanceMDFeed(MarketDataFeed):
                        for ticker, price in prices.items()):
                     self._prices = {self._inverse_ticker_map[ticker]: price for ticker, price in prices.items()}
                     self._update_last_timestamp()
-                    print(f'Updated {self._prices}', flush=True)
+                    print(f'Updated {self._prices}\n', flush=True)
                 time.sleep(self._update_frequency)
             except Exception as e:
                 traceback.print_exc()
@@ -95,6 +95,8 @@ class RofexProxy(MarketDataFeed):
         self._pyrofex_wrapper = prw.PyRofexWrapper()
         self._bids = {}
         self._asks = {}
+        self._bids_lock = threading.Lock()
+        self._asks_lock = threading.Lock()
         self._subscribe_to_order_report = subscribe_to_order_report
 
     def __str__(self):
@@ -126,10 +128,14 @@ class RofexProxy(MarketDataFeed):
         self._pyrofex_wrapper.close_websocket_connection_safely()
 
     def asks(self):
-        return copy.deepcopy(self._asks)
+        with self._asks_lock:
+            copied = copy.deepcopy(self._asks)
+        return copied
 
     def bids(self):
-        return copy.deepcopy(self._bids)
+        with self._bids_lock:
+            copied = copy.deepcopy(self._bids)
+        return copied
 
     def place_order(self, *args, **kwargs):
         return self._pyrofex_wrapper.send_order(*args, **kwargs)
@@ -142,15 +148,17 @@ class RofexProxy(MarketDataFeed):
 
     def _market_data_handler(self, message):
         try:
-            print(f'Rofex Market Data Received {message}', flush=True)
+            print(f'Rofex Market Data Received {message}\n', flush=True)
             ticker = message['instrumentId']['symbol']
             market_data = message['marketData']
             if market_data[pyRofex.MarketDataEntry.OFFERS.value]:
                 md_entry = market_data[pyRofex.MarketDataEntry.OFFERS.value][0]
-                self._asks[ticker] = OrderbookLevel(md_entry['price'], md_entry['size'])
+                with self._asks_lock:
+                    self._asks[ticker] = OrderbookLevel(md_entry['price'], md_entry['size'])
             if market_data[pyRofex.MarketDataEntry.BIDS.value]:
                 md_entry = market_data[pyRofex.MarketDataEntry.BIDS.value][0]
-                self._bids[ticker] = OrderbookLevel(md_entry['price'], md_entry['size'])
+                with self._bids_lock:
+                    self._bids[ticker] = OrderbookLevel(md_entry['price'], md_entry['size'])
             self._update_last_timestamp()
         except Exception as e:
             traceback.print_exc()
