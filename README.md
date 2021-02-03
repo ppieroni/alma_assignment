@@ -1,33 +1,33 @@
 ## Simple IR Arbitrage Bot
 ### Overview
 This module implements a _simple trading bot_ which looks for implicit 
-rate arbitrage opportunities using futures and its underliers.
+rate arbitrage opportunities using futures and their underliers.
 Futures market data is read from Rofex and spot market data from yahoo finance.
 Then offered and taker implicit rates are computed for each contract to determine
-if is there any buy/sell combination which gives instant profit. 
+if is there any buy/sell combination which gives immediate profit. 
 When any of these opportunities is present, orders are sent to a 
 [simulated exchange](https://remarkets.primary.ventures/),
 and relevant trade information is printed.
 ____
 ### Trading strategy
-The trading strategy used here is pretty basic and requires the following steps:
+The trading strategy used here is pretty basic and involves the following steps:
 1. For each future contract, the offered and taker implicit rate will be calculated.
 1. Rates obtained from contracts with similar maturity will be compared looking for
 low offered rates and high taker rates.
-1. If any opportunity is found these positions will be taken:
+1. If any opportunity is found the following positions will be taken:
     1. Buy long the contract with the minimum offered rate.
     1. Sell short its underlier, making this position neutral.
     1. Sell short the contract with the maximum taker rate.
     1. Buy long its underlier, making again the position neutral.
 ____
 ### Assumptions
-Several assumptions has been made, such as:
+Some assumptions has been made to simplify the problem, such as:
 * The transaction cost for each trade can be expressed as a constant,
   affecting the implicit rate difference directly. 
 * There is no money market account available, so the only trade considered
   is among futures with similar maturity.
 * The time to maturity for a contract is computed in days, starting _today_
-  and including the maturity date. i.e. the number of _days to maturity_ on the maturity date is 1.
+  and including the maturity date. i.e. the number of _days to maturity_ on maturity date is 1.
 ----
 ### Installation and Usage
 This package has been developed for python 3.8 and its dependencies 
@@ -52,20 +52,20 @@ tb.IRArbitrageTradingBot(tickers, spot_update_frequency).launch()
 ```
 ____
 ### Design
-The object design and its interactions is quite simple, 
+The object design and their interactions is quite simple, 
 based on few classes with clear responsibilities. Most of them are described here:
 
 #### `IRArbitrageTradingBot`
 As has been shown in the previous section, this class is the entry point to launch the process. 
-It is in charge of instantiate all the classes described below, and ensure everything stays working.
+It is in charge of instantiate all the classes described below, and ensure everything stay working.
 Once the objects are created, its main responsibilities are:
 * to keep the data retrieving going
-* to launch the implicit rates calculation 
-* perform trading every time the market data update happens.
+* to launch the implicit rates calculation
+* to launch the arbitrage opportunity evaluaiton and trading
 
 #### `RofexProxy`
 This is a proxy object for Rofex used to get the market data through websocket 
-and also place and track orders using the rest api.
+and also to place and track orders using the rest api.
 This object keeps track on the best bid and best ask for each of the contracts that will be traded.
 It uses the [pyRofex](https://github.com/matbarofex/pyRofex) package in background for the connectivity tasks.
 
@@ -79,8 +79,9 @@ As in the `RofexProxy`, the data will be marked as updated only when a change in
 #### `DataUpdateWatchman`
 The main responsibility of this class is to keep track of the data reading,
 used as a reference to know whether new data has arrived or not.
-This can be achieved by setting up a landmark each time data will be read 
-(using `set_last_processed_timestamp`) and through the `should_update` method.
+This can be achieved by setting up a landmark each time data is read 
+(using `set_last_processed_timestamp`) and through the `should_update` method which
+returns True if the data is ahead of last read.
 
 #### `IRExpert`
 This class is used to compute and provide the implicit rate for each contract.
